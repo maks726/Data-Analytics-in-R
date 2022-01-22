@@ -1,5 +1,5 @@
 - 👋 Hi, I’m @maks726
-- 👀 I’m interested in python
+- 👀 I’m interested in Python
 - 🌱 I’m currently learning C++
 - 💞️ I’m NOT looking to collaborate on 
 - 📫 You can't reach me
