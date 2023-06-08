@@ -1,0 +1,128 @@
+bestK <- function(train, test, trclass, tsclass) {
+ ctr <- c(); cts <- c()
+ for (k in seq(1, 21, by=2)) {
+ knnTr <- class::knn(train, train, trclass, k)
+ knnTs <- class::knn(train, test, trclass, k)
+ trTable <- table(knnTr, trclass);tsTable <- table(knnTs, tsclass)
+ erTr <- sum(trTable[row(trTable)!=col(trTable)])/sum(trTable)
+ erTs <- sum(tsTable[row(tsTable)!=col(tsTable)])/sum(tsTable)
+ ctr <- c(ctr,erTr);cts <- c(cts,erTs)
+ }
+ err <- data.frame(k=seq(1, 21, by=2), trER=ctr, tsER=cts)
+ return(err)
+}
+trprop <- 0.65
+mush_poison <- which(mush$poison == 1)
+mush_not_poison <- which(mush$poison == 0)
+#Choose a sample of each
+ind_poison <- sample(1:length(mush_poison), size = trprop * 
+length(mush_poison))
+ind_not_poison <- sample(1:length(mush_not_poison), size = trprop * 
+length(mush_not_poison))
+#Create a data frame for each set and combine
+mush_train_poison <- mush[mush_poison[ind_poison], ]
+mush_train_not_poison <- mush[mush_not_poison[ind_not_poison], ]
+mush_train <- rbind(mush_train_poison, mush_train_not_poison)
+mush_poison_test <- mush[-c(mush_not_poison, mush_poison[ind_poison]), 
+]
+mush_not_poison_test <- mush[-c(mush_poison, 
+mush_not_poison[ind_not_poison]), ]
+mush_test <- rbind(mush_poison_test, mush_not_poison_test)
+classif <- class::knn(train = mush_train[,1:54], test = 
+mush_test[,1:54], cl = mush_train$poison, k = 5)
+sum(is.na(classif))
+tt <- table(classif, mush_test$poison)
+tt
+prop.table(table(classif, mush_test$poison))
+errors=c()
+errors["knn"] <- sum(tt[row(tt) != col(tt)])
+df <- bestK(mush_train[,1:54], mush_test[,1:54], mush_train$poison, 
+mush_test$poison)
+plot(df$k, df$trER, type='o', ylim=c(0,1) , xlab = "k", 
+ylab="Errorrate", col="blue")
+lines(df$k, df$tsER, type='o', col="red")
+#Classification tree
+library("rpart")
+library("rattle")
+treefit <- rpart(poison ~ ., data = mush_train, method = "class")
+fancyRpartPlot(treefit)
+classif <- predict(treefit, newdata = mush_test, type="class")
+tt <- table(classif, mush_test$poison)
+errors["tree"] <- sum(tt[row(tt) != col(tt)]) 
+barplot(errors)
+printcp(treefit)
+plotcp(treefit)
+prunedfit <- prune(treefit, cp=0.03)
+classif <- predict(prunedfit, newdata = mush_test, type="class")
+tt <- table(classif, mush_test$poison)
+errors["yeapruned.03tree"] <- sum(tt[row(tt) != col(tt)])
+fancyRpartPlot(prunedfit)
+barplot(errors)
+#Naive Bayes classification
+library("e1071")
+nbfit <- naiveBayes(poison ~ ., data = mush_train)
+classif <- predict(nbfit, newdata = mush_test, type="class")
+tt <- table(classif, mush_test$poison)
+tt
+errors["NB"] <- sum(tt[row(tt) != col(tt)])
+barplot(errors)
+#Discriminant analysis
+#We didn't use DA cause our group is very small
+ldafit <- lda(poison ~ ., data = mush_train)
+classif <- predict(ldafit, newdata = mush_test, type="class")
+tt<-table(classif$class, mush_test$poison)
+errors["LDA"] <- sum(tt[row(tt) != col(tt)])
+barplot(errors)
+#Improvement of predictive models
+library("caret")
+df <- mush
+idstrain <- createDataPartition(df$poison ,p=.65, list = FALSE)
+dftrain <-df[idstrain,]
+dftest<-df[-idstrain,]
+nrow(df[df$poison== 1,] ) / nrow(df)
+nrow(dftrain[dftrain$poison == 1,]) / nrow(dftrain)
+errors=c()
+fit<-train(poison~.,dftrain,method="knn")
+ggplot(fit)
+classif <- predict(fit, dftest)
+tt<-table(classif,dftest$poison)
+errors["knn"]<-sum(tt[row(tt)!=col(tt)])
+barplot(errors)
+fit<-train(poison~.,dftrain,method="rpart")
+ggplot(fit)
+fancyRpartPlot(fit$finalModel)
+classif <- predict(fit,dftest)
+tt<-table(classif,dftest$poison)
+sum(tt[row(tt)!=col(tt)])
+errors["tree"]<-sum(tt[row(tt)!=col(tt)])
+barplot(errors)
+svmfit <- svm(poison ~ ., data = dftrain)
+classif <- predict(svmfit,newdata = dftest,type="class")
+tt<-table(classif,dftest$poison)
+tt
+errors["SVM"] <- sum(tt[row(tt) != col(tt)])
+barplot(errors)
+train_control<- trainControl(method="cv", number=2)
+fit<-train(poison~., dftrain, method="knn", 
+ trControl=train_control)
+ggplot(fit)
+classif <- predict(fit,dftest)
+tt<-table(classif,dftest$poison)
+sum(tt[row(tt)!=col(tt)])
+folds <- fit$control
+#look at folds$index and folds$indexOut
+#can use other classifiers instead of knn
+plot(fit)
+fit$finalModel$k
+corMat <- cor(df[,-1])
+highCor <- findCorrelation(corMat,names = T, cutoff=0.8)
+highCor
+dfselected<-df[,!names(df) %in% highCor] 
+dfselectedtrain<-dfselected[idstrain,]
+dfselectedtest<-dfselected[-idstrain,]
+fit<-train(poison~., dfselectedtrain, method="knn" 
+,trControl=train_control)
+ggplot(fit)
+classif <- predict(fit,dfselectedtest)
+tt<-table(classif,dfselectedtest$poison)
+sum(tt[row(tt)!=col(tt)])
