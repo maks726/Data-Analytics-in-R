@@ -1,0 +1,49 @@
+#PCA
+mush <- subset(mushrooms, select=-c(name))
+mush$family <- mush$fam_num
+mush <- subset(mush, select=-c(fam_num))
+mush.pca <-prcomp(subset(mush, select=-c(family)), center = T, scale. 
+= T)
+mush.pca_scal <- prcomp(subset(mush, select=-c(family)), center=T, 
+scale. = T)
+#summary(mush.pca_scal)
+coeff_a<-mush.pca_scal$rotation
+#coeff_a
+x<-mush.pca_scal$x
+#x
+fviz_eig(mush.pca_scal)
+fviz_pca_ind(mush.pca, col.ind = "cos2", radient.cols = c("#00AFBB", 
+"#E7B800", "#FC4E07"), repel = TRUE)
+###Clustering
+##K-means
+set.seed(16)
+clusterspca <- kmeans(mush[,2:55], 23)
+mush.clusterpca <- mush
+mush.clusterpca$clus_kmeans_pca <- as.factor(clusterspca$cluster)
+plot(x[, 1], x[, 2], col=mush.clusterpca$clus_kmeans_pca, main=" 
+Clusters" , xlab = "PC1", ylab = "PC2")
+plot(x[, 1], x[, 2], col = mush$family, main = "Mushroons families", 
+xlab = "PC1", ylab = "PC2")
+plot(silhouette(clusterspca$cluster, dist(mush[, 2:55])))
+#Gauss
+gauss_clust <- Mclust(mush[, 2:55], 23)
+mush.clusterpca <- mush
+mush.clusterpca$clus_gauss_pca <-
+as.factor(gauss_clust$classification) 
+plot(mush.pca$x[, 1], mush.pca$x[, 2], col = 
+mush.clusterpca$clus_gauss_pca, main=" Clusters", xlab ="PC1", 
+ylab="PC2")
+plot(mush.pca$x[,1], mush.pca$x[,2], col = mush$family 
+,main="Mushroons families" ,xlab ="PC1", ylab="PC2")
+plot(silhouette(gauss_clust$classification, dist(mush[, 2:55])))
+##Hierarchical clustering
+heirch_clust <- hclust(dist(mush[, 2:55]), method = "average")
+plot(mush.pca$x[, 1], mush.pca$x[, 2], col = cutree(heirch_clust, k = 
+23))
+##Multidimentional Clustering ploting with principal components for 
+all variables
+parcoord(mush[, 2:55], col = gauss_clust$classification)
+parcoord(mush[, 2:55], col = cutree(heirch_clust, k = 23))
+#only for length measures
+parcoord(mush[, c(2:3, 5:8)], col = gauss_clust$classification)
+parcoord(mush[, c(2:3, 5:8)], col = cutree(heirch_clust, k = 23))
