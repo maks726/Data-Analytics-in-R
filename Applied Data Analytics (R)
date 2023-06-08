@@ -1,1 +1,303 @@
-
+install.packages("tidyr")
+library(tidyr)
+install.packages("splitstackshape")
+library(splitstackshape)
+install.packages('fastDummies')
+library("fastDummies")
+library("dplyr")
+library ("stringr")
+library(caret)
+library(MASS)
+library(modelr)
+install.packages('MLmetrics')
+library(MLmetrics)
+install.packages("ggplot2")
+install.packages("klaR")
+install.packages("cba")
+install.packages("factoextra")
+install.packages("cluster")
+library("klaR")
+library("cba")
+library("factoextra")
+library("cluster")
+install.packages("mclust")
+library(mclust)
+#install.packages("rattle")
+#install.packages("caret")
+#install.packages('class')
+library(rattle)
+library(caret)
+library(rpart)
+install.packages('randomForest')
+library(randomForest)
+mushrooms <- read.csv("mushrooms.csv", sep=";")
+head(mushrooms,3)
+mushrooms$gill.spacing <- na_if(mushrooms$gill.spacing, '')
+sum(is.na(mushrooms$gill.spacing))/173
+# we have more than 41% of missing values; close, distant and none 
+values is
+#not representative, we have no numerical information about this data 
+while 
+#other parametrs are quite accurate, so it is better to delete this 
+variable.
+mushrooms <- subset( mushrooms, select = -gill.spacing )
+#min and max separation
+mushrooms<-mushrooms%>%
+ separate(cap.diameter,c("min.cap.diameter" 
+,"max.cap.diameter"),",")%>%
+ separate(stem.height,c("min.stem.height" ,"max.stem.height"),",")%>%
+ separate(stem.width,c("min.stem.width" ,"max.stem.width"),",")
+mushrooms$min.cap.diameter<- gsub("\\[","", 
+mushrooms$min.cap.diameter)
+mushrooms$max.cap.diameter<- gsub("\\]","" 
+,mushrooms$max.cap.diameter)
+mushrooms$min.stem.height<- gsub("\\[","", mushrooms$min.stem.height)
+mushrooms$max.stem.height<- gsub("\\]","" ,mushrooms$max.stem.height)
+mushrooms$min.stem.width<- gsub("\\[","", mushrooms$min.stem.width)
+mushrooms$max.stem.width<- gsub("\\]","" ,mushrooms$max.stem.width)
+mushrooms$min.cap.diameter<-as.numeric(mushrooms$min.cap.diameter)
+mushrooms$max.cap.diameter<-as.numeric(mushrooms$max.cap.diameter)
+mushrooms$min.stem.height<-as.numeric(mushrooms$min.stem.height)
+mushrooms$max.stem.height<-as.numeric(mushrooms$max.stem.height)
+mushrooms$min.stem.width<-as.numeric(mushrooms$min.stem.width)
+mushrooms$max.stem.width<-as.numeric(mushrooms$max.stem.width)
+#cap.shape to several binary categorical variables
+mushrooms$cap.shape<- gsub("\\[","", mushrooms$cap.shape)
+mushrooms$cap.shape<- gsub("\\]","", mushrooms$cap.shape)
+mushrooms<-mushrooms%>%
+ cSplit(splitCols="cap.shape", sep = ",")%>%replace(is.na(.), 0)%>%
+ dummy_cols(select_columns = 
+c("cap.shape_1","cap.shape_2","cap.shape_3"),
+ remove_selected_columns = TRUE, ignore_na = FALSE)%>%
+ mutate(cap.shape_bell=cap.shape_1_b+cap.shape_2_b,
+ cap.shape_conical=cap.shape_1_c+cap.shape_2_c,
+ cap.shape_convex=cap.shape_1_x+cap.shape_2_x,
+ cap.shape_flat=cap.shape_1_f+cap.shape_2_f+cap.shape_3_f,
+ cap.shape_sunken=cap.shape_1_s+cap.shape_2_s+cap.shape_3_s,
+ cap.shape_spherical=cap.shape_1_p+cap.shape_2_p,
+ cap.shape_others=cap.shape_1_o+cap.shape_2_o+cap.shape_3_o,
+ cap.shape_2_0 = NULL,
+ cap.shape_3_0 = NULL,
+ .keep="unused")
+#cap.color to several binary categorical variables using alternative 
+method
+mushrooms$cap.color_brown <- with(mushrooms, 
+ ifelse(is.na(stringr::str_extract(
+ cap.color, "n")), 0, 1))
+mushrooms$cap.color_buff <- with(mushrooms, 
+ ifelse(is.na(stringr::str_extract(
+ cap.color, "b")), 0, 1))
+mushrooms$cap.color_gray <- with(mushrooms, 
+ ifelse(is.na(stringr::str_extract(
+ cap.color, "g")), 0, 1))
+mushrooms$cap.color_green <- with(mushrooms, 
+ ifelse(is.na(stringr::str_extract(
+ cap.color, "r")), 0, 1))
+mushrooms$cap.color_pink <- with(mushrooms, 
+ ifelse(is.na(stringr::str_extract(
+ cap.color, "p")), 0, 1))
+mushrooms$cap.color_purple <- with(mushrooms, 
+ ifelse(is.na(stringr::str_extract(
+ cap.color, "u")), 0, 1))
+mushrooms$cap.color_red <- with(mushrooms, 
+ ifelse(is.na(stringr::str_extract(
+ cap.color, "e")), 0, 1))
+mushrooms$cap.color_white <- with(mushrooms, 
+ ifelse(is.na(stringr::str_extract(
+ cap.color, "w")), 0, 1))
+mushrooms$cap.color_yellow <- with(mushrooms, 
+ ifelse(is.na(stringr::str_extract(
+ cap.color, "y")), 0, 1))
+mushrooms$cap.color_blue <- with(mushrooms, 
+ ifelse(is.na(stringr::str_extract(
+ cap.color, "l")), 0, 1))
+mushrooms$cap.color_orange <- with(mushrooms, 
+ ifelse(is.na(stringr::str_extract(
+ cap.color, "o")), 0, 1))
+mushrooms$cap.color_black <- with(mushrooms, 
+ ifelse(is.na(stringr::str_extract(
+ cap.color, "k")), 0, 1))
+#fill absent data with na
+mushrooms<- na_if(mushrooms, '')
+#cap.surface fill na, find possible substitution
+mushrooms$Cap.surface<- gsub("\\[","", mushrooms$Cap.surface)
+mushrooms$Cap.surface<- gsub("\\]","", mushrooms$Cap.surface)
+sum(str_count(mushrooms$Cap.surface, 'y'), na.rm = TRUE)
+sum(str_count(mushrooms$Cap.surface, 'i'), na.rm = TRUE)
+sum(str_count(mushrooms$Cap.surface, 'g'), na.rm = TRUE)
+sum(str_count(mushrooms$Cap.surface, 's'), na.rm = TRUE)
+sum(str_count(mushrooms$Cap.surface, 'h'), na.rm = TRUE)
+sum(str_count(mushrooms$Cap.surface, 'l'), na.rm = TRUE)
+sum(str_count(mushrooms$Cap.surface, 'k'), na.rm = TRUE)
+sum(str_count(mushrooms$Cap.surface, 't'), na.rm = TRUE)
+sum(str_count(mushrooms$Cap.surface, 'w'), na.rm = TRUE)
+sum(str_count(mushrooms$Cap.surface, 'e'), na.rm = TRUE)
+mushrooms$Cap.surface[is.na(mushrooms$Cap.surface)] <- 't'
+mushrooms$Cap.surface_fibrous <- with(mushrooms, 
+ 
+ifelse(is.na(stringr::str_extract(
+ Cap.surface, "i")), 0, 1))
+mushrooms$Cap.surface_grooves <- with(mushrooms, 
+ 
+ifelse(is.na(stringr::str_extract(
+ Cap.surface, "g")), 0, 1))
+mushrooms$Cap.surface_scaly <- with(mushrooms, 
+ ifelse(is.na(stringr::str_extract(
+ Cap.surface, "y")), 0, 1))
+mushrooms$Cap.surface_smooth <- with(mushrooms, 
+ 
+ifelse(is.na(stringr::str_extract(
+ Cap.surface, "s")), 0, 1))
+mushrooms$Cap.surface_shiny <- with(mushrooms, 
+ ifelse(is.na(stringr::str_extract(
+ Cap.surface, "h")), 0, 1))
+mushrooms$Cap.surface_leathery <- with(mushrooms, 
+ 
+ifelse(is.na(stringr::str_extract(
+ Cap.surface, "l")), 0, 1))
+mushrooms$Cap.surface_silky <- with(mushrooms, 
+ ifelse(is.na(stringr::str_extract(
+ Cap.surface, "k")), 0, 1))
+mushrooms$Cap.surface_sticky <- with(mushrooms, 
+ 
+ifelse(is.na(stringr::str_extract(
+ Cap.surface, "t")), 0, 1))
+mushrooms$Cap.surface_wrinkled <- with(mushrooms, 
+ 
+ifelse(is.na(stringr::str_extract(
+ Cap.surface, "w")), 0, 1))
+mushrooms$Cap.surface_fleshy <- with(mushrooms, 
+ 
+ifelse(is.na(stringr::str_extract(
+ Cap.surface, "e")), 0, 1))
+#gill.attachment fill na, find possible substitution
+#We have unknown variable that isn't in dataframe, so will replace NA 
+with u
+mushrooms$gill.attachment[is.na(mushrooms$gill.attachment)] <- 'u'
+mushrooms$gill.attachment_a <- with(mushrooms, 
+ ifelse(is.na(stringr::str_extract(
+ gill.attachment, "a")), 0, 1))
+mushrooms$gill.attachment_x <- with(mushrooms, 
+ ifelse(is.na(stringr::str_extract(
+ gill.attachment, "x")), 0, 1))
+mushrooms$gill.attachment_d <- with(mushrooms, 
+ ifelse(is.na(stringr::str_extract(
+ gill.attachment, "d")), 0, 1))
+mushrooms$gill.attachment_e <- with(mushrooms, 
+ ifelse(is.na(stringr::str_extract(
+ gill.attachment, "e")), 0, 1))
+mushrooms$gill.attachment_s <- with(mushrooms, 
+ ifelse(is.na(stringr::str_extract(
+ gill.attachment, "s")), 0, 1))
+mushrooms$gill.attachment_p <- with(mushrooms, 
+ ifelse(is.na(stringr::str_extract(
+ gill.attachment, "p")), 0, 1))
+mushrooms$gill.attachment_p <- with(mushrooms, 
+ ifelse(is.na(stringr::str_extract(
+ gill.attachment, "f")), 0, 1))
+mushrooms$gill.attachment_p <- with(mushrooms, 
+ ifelse(is.na(stringr::str_extract(
+ gill.attachment, "u")), 0, 1))
+mushrooms$does.bruise.or.bleed<- ifelse(mushrooms$does.bruise.or.bleed 
+== "[t]",
+ 
+1,mushrooms$does.bruise.or.bleed)
+mushrooms$does.bruise.or.bleed<- ifelse(mushrooms$does.bruise.or.bleed 
+== "[f]",
+ 
+0,mushrooms$does.bruise.or.bleed)
+#gill.color
+mushrooms$gill.color_brown <- with(mushrooms, 
+ ifelse(is.na(stringr::str_extract(
+ gill.color, "n")), 0, 1))
+mushrooms$gill.color_buff <- with(mushrooms, 
+ ifelse(is.na(stringr::str_extract(
+ gill.color, "b")), 0, 1))
+mushrooms$gill.color_gray <- with(mushrooms, 
+ ifelse(is.na(stringr::str_extract(
+ gill.color, "g")), 0, 1))
+mushrooms$gill.color_green <- with(mushrooms, 
+ ifelse(is.na(stringr::str_extract(
+ gill.color, "r")), 0, 1))
+mushrooms$gill.color_pink <- with(mushrooms, 
+ ifelse(is.na(stringr::str_extract(
+ gill.color, "p")), 0, 1))
+mushrooms$gill.color_purple <- with(mushrooms, 
+ ifelse(is.na(stringr::str_extract(
+ gill.color, "u")), 0, 1))
+mushrooms$gill.color_red <- with(mushrooms, 
+ ifelse(is.na(stringr::str_extract(
+ gill.color, "e")), 0, 1))
+mushrooms$gill.color_white <- with(mushrooms, 
+ ifelse(is.na(stringr::str_extract(
+ gill.color, "w")), 0, 1))
+mushrooms$gill.color_yellow <- with(mushrooms, 
+ ifelse(is.na(stringr::str_extract(
+ gill.color, "y")), 0, 1))
+mushrooms$gill.color_blue <- with(mushrooms, 
+ ifelse(is.na(stringr::str_extract(
+ gill.color, "l")), 0, 1))
+mushrooms$gill.color_orange <- with(mushrooms, 
+ ifelse(is.na(stringr::str_extract(
+ gill.color, "o")), 0, 1))
+mushrooms$gill.color_black <- with(mushrooms, 
+ ifelse(is.na(stringr::str_extract(
+ gill.color, "k")), 0, 1))
+mushrooms$gill.color_none <- with(mushrooms, 
+ ifelse(is.na(stringr::str_extract(
+ gill.color, "f")), 0, 1))
+mushrooms$poison <- with(mushrooms, 
+ifelse(is.na(stringr::str_extract(class, "p")), 0, 1))
+mushrooms$fam_num <- with(mushrooms, ifelse(family == "Amanita 
+Family", 1,
+ ifelse(family =="Bolbitius 
+Family", 2, 
+ ifelse(family 
+=="Bolete Family", 3,
+ 
+ifelse(family =="Bracket Fungi", 4,
+ 
+ifelse(family =="Chanterelle Family", 5,
+ 
+ifelse(family =="Cortinarius Family", 6,
+ 
+ifelse(family =="Crepidotus Family", 7,
+ 
+ifelse(family =="Ear-Pick Family", 8,
+ 
+ifelse(family =="Entoloma Family", 9,
+ 
+ifelse(family =="Hydnum Family", 10,
+ 
+ifelse(family =="Ink Cap Family", 11,
+ 
+ifelse(family =="Jelly Discs Family", 12,
+ 
+ifelse(family =="Lepiota Family", 13,
+ 
+ifelse(family =="Morel Family", 14,
+ 
+ifelse(family =="Mushroom Family", 15,
+ 
+ifelse(family =="Oyster Mushroom Family", 16,
+ 
+ifelse(family =="Paxillus Family", 17,
+ 
+ifelse(family =="Pluteus Family", 18,
+ 
+ifelse(family =="Russula Family", 19,
+ 
+ifelse(family =="Saddle-Cup Family", 20,
+ 
+ifelse(family =="Stropharia Family", 21,
+ 
+ifelse(family =="Tricholoma Family", 22,
+ 
+ifelse(family =="Wax Gill Family", 23, 0))))))))))))))))))))))))
+#delete unnecessary columns
+mushrooms <- subset( mushrooms, select = -cap.color )
+mushrooms <- subset( mushrooms, select = -Cap.surface )
+mushrooms <- subset( mushrooms, select = -cap.shape )
+mushrooms <- subset( mushrooms, select = -gill.attachment)
+mushrooms <- subset( mushrooms, select = -gill.color)
+mushrooms <- subset( mushrooms, select = -class)
