@@ -1,0 +1,94 @@
+mushrooms_reg <-mushrooms %>% 
+ mutate(av.cap.diamiter=(max.cap.diameter+min.cap.diameter)/2,
+ av.stem.width=(min.stem.width+max.stem.width)/2,
+ av.stem.height=(min.stem.height+max.stem.height)/2)%>%
+ dplyr::select(name, av.cap.diamiter, av.stem.width,av.stem.height)
+View(mushrooms_reg)
+#MAPE will be infinity, because we have data with zero value in 
+161,164 and 165 raws, will delete them
+mushrooms_reg <- mushrooms_reg[mushrooms_reg$av.stem.height>0]
+#Linear
+plot(av.stem.height~av.stem.width,mushrooms_reg,asp=1)
+plot(av.stem.height~av.cap.diamiter,mushrooms_reg,asp=1)
+linearMod <- lm(av.stem.height ~ .-name, data=mushrooms_reg)
+summary(linearMod)
+#as we see R^2 is less than 25%, so the model is not good, will add 
+other cap
+#parametres and use min and max instead of average
+mushrooms_reg <-mushrooms %>% 
+ mutate(av.stem.height=(min.stem.height+max.stem.height)/2)%>%
+ dplyr::select(min.cap.diameter, max.cap.diameter, min.stem.width , 
+max.stem.width, av.stem.height)
+mushrooms_r <-mushrooms %>% dplyr:: select(starts_with("cap"))
+final_reg <- data.frame(mushrooms_reg, mushrooms_r)
+final_reg <- final_reg[final_reg$av.stem.height>0,]
+linearMod <- lm(av.stem.height ~ . , data=final_reg)
+summary(linearMod)
+l_pred<-predict(linearMod,final_reg)
+l_frame <- data.frame(final_reg$av.stem.height, l_pred)
+RMSE(l_pred, final_reg$av.stem.height)
+MAPE(l_pred, final_reg$av.stem.height)
+#Polynomial
+polMod <- lm(av.stem.height ~ 
+poly(min.cap.diameter,2)+poly(max.cap.diameter,2)+poly(min.stem.width,
+2)+ 
+max.stem.width+av.stem.height+cap.color_brown+cap.color_buff+cap.color
+_gray+
+cap.color_green+cap.color_pink+cap.color_purple+cap.color_red+cap.colo
+r_white+
+cap.color_yellow+cap.color_blue+cap.color_orange+cap.color_black+Cap.s
+urface_fibrous+
+Cap.surface_grooves+Cap.surface_scaly+Cap.surface_smooth+Cap.surface_s
+hiny+Cap.surface_leathery+
+Cap.surface_silky+Cap.surface_sticky+Cap.surface_wrinkled+Cap.surface_
+fleshy, data=final_reg)
+summary(polMod)
+polMod2 <- lm(av.stem.height ~ 
+poly(min.cap.diameter,3)+poly(max.cap.diameter,3)+poly(min.stem.width,
+3)+ 
+ 
+max.stem.width+av.stem.height+cap.color_brown+cap.color_buff+cap.color
+_gray+
+ 
+cap.color_green+cap.color_pink+cap.color_purple+cap.color_red+cap.colo
+r_white+
+ 
+cap.color_yellow+cap.color_blue+cap.color_orange+cap.color_black+Cap.s
+urface_fibrous+
+ 
+Cap.surface_grooves+Cap.surface_scaly+Cap.surface_smooth+Cap.surface_s
+hiny+Cap.surface_leathery+
+ 
+Cap.surface_silky+Cap.surface_sticky+Cap.surface_wrinkled+Cap.surface_
+fleshy, data=final_reg)
+summary(polMod2)
+anova(polMod,polMod2)
+#insignificant, will choose the first
+p_pred<-predict(polMod,final_reg)
+p_frame <- data.frame(final_reg$av.stem.height, p_pred)
+View(p_frame)
+RMSE(p_pred, final_reg$av.stem.height)
+MAPE(p_pred, final_reg$av.stem.height)
+#tree
+inTraining <- createDataPartition(final_reg$av.stem.height, p = 0.65, 
+list = FALSE)
+training <- final_reg[ inTraining,]
+testing <- final_reg[-inTraining,]
+fitControl <- trainControl(method = "cv" , number = 4)
+TRR <- train(av.stem.height ~ ., data
+ = training,method = "rpart",trControl = fitControl)
+TRR$results
+pred<-predict(TRR,testing)
+rmse(TRR,testing)
+mape(TRR,testing)
+tree<-data.frame(testing$av.stem.height,pred)
+View(tree)
+#random forest
+RFR <- train(av.stem.height ~ ., data
+ = training,method = "rf",trControl = fitControl)
+#RFR$results
+pred2<-predict(RFR,testing)
+rmse(RFR,testing)
+mape(RFR,testing)
+forest<-data.frame(testing$av.stem.height,pred2)
+View(forest)
